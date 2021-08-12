@@ -168,11 +168,21 @@ namespace AutoBooter
             iStartProcess.WaitForExit();
             if (iStartProcess.ExitCode == 0)
             {
+                this.status_txt.Text = "очистка";
+                this.progress_bar.Value = 90;
+                File.Delete("avrdude.exe");
+                File.Delete("frimware.hex");
+                File.Delete("avrdude.conf");
                 this.status_txt.Text = "готово";
                 this.progress_bar.Value = 100;
                 return;
             }
-            
+
+            this.status_txt.Text = "очистка";
+            this.progress_bar.Value = 90;
+            File.Delete("avrdude.exe");
+            File.Delete("frimware.hex");
+            File.Delete("avrdude.conf");
             this.boot_btn.Enabled = true;
             this.port_select.Items.Clear();
             this.port_select.Items.AddRange(SerialPort.GetPortNames());
