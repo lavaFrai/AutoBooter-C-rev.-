@@ -9,6 +9,7 @@ using System.Web;
 using System.Net;
 using System.Text;
 using System.IO.Ports;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Security.Cryptography;
@@ -127,6 +128,9 @@ namespace AutoBooter
         private void boot_btn_Click(object sender, EventArgs e)
         {
             this.boot_btn.Enabled = false;
+            this.port_select.Enabled = false;
+            status_txt.Text = "проверка достоверности";
+            progress_bar.Value = 0;
             bool has_port = false;
             foreach (string i in SerialPort.GetPortNames())
             {
@@ -139,12 +143,42 @@ namespace AutoBooter
             {
                 MessageBox.Show("Необходимо выбрать существующий порт для прошивки устройства");
                 string[] ports = SerialPort.GetPortNames();
+                this.boot_btn.Enabled = true;
                 this.port_select.Items.Clear();
                 this.port_select.Items.AddRange(ports);
-                this.boot_btn.Enabled = true;
+                this.port_select.Enabled = true;
+                status_txt.Text = "ошибка подключения";
                 return;
             }
             // тут начинаем загрузку обновления
+            status_txt.Text = "подготовка AVRDUDE";
+            this.progress_bar.Value = 20;
+            string path = System.IO.Directory.GetCurrentDirectory();
+            string port = (string)this.port_select.SelectedItem;
+            string request = "  -C\"" + path + "\\config.conf\" -v -patmega328p -carduino -P" + port + " -b115200 -D \"-Uflash:w:\"" + path + "\\firmware.hex\":i";
+            Process iStartProcess = new Process(); // новый процесс
+            iStartProcess.StartInfo.FileName = (path + "\\avrdude.exe"); // путь к запускаемому файлу
+            iStartProcess.StartInfo.Arguments = request; // эта строка указывается, если программа запускается с параметрами (здесь указан пример, для наглядности)
+                                                         // iStartProcess.StartInfo.WindowStyle = ProcessWindowStyle.Hidden; // эту строку указываем, если хотим запустить программу в скрытом виде
+
+            this.progress_bar.Value = 40;
+            status_txt.Text = "загрузка прошивки";
+            iStartProcess.Start(); // запускаем программу
+            iStartProcess.WaitForExit(30000); // эту строку указываем, если нам надо будет ждать завершения программы определённое время, пример: 2 мин. (указано в миллисекундах - 2 мин. * 60 сек. * 1000 м.сек.)
+            iStartProcess.WaitForExit();
+            if (iStartProcess.ExitCode == 0)
+            {
+                this.status_txt.Text = "готово";
+                this.progress_bar.Value = 100;
+                return;
+            }
+            
+            this.boot_btn.Enabled = true;
+            this.port_select.Items.Clear();
+            this.port_select.Items.AddRange(SerialPort.GetPortNames());
+            this.port_select.Enabled = true;
+            this.progress_bar.Value = 0;
+            this.status_txt.Text = "ошибка загрузки (code " + iStartProcess.ExitCode + ")";
         }
 
         private void label2_Click_1(object sender, EventArgs e)
